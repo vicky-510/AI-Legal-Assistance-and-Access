@@ -37,6 +37,33 @@ async function request(path, { method = 'GET', body, isFormData = false, signal 
   return payload;
 }
 
+// Fetches a binary file (PDF report) and triggers a browser save-as, rather
+// than a plain <a href> navigation — that way a 401/404 from an expired
+// session or missing document surfaces as a normal ApiError/toast instead
+// of the browser trying to "download" a JSON error body as a broken PDF.
+async function downloadFile(path, filename) {
+  const res = await fetch(`${BASE}${path}`, { credentials: 'include' });
+
+  if (!res.ok) {
+    let payload = null;
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      payload = await res.json().catch(() => null);
+    }
+    throw new ApiError(payload?.error || `Download failed with status ${res.status}`, res.status, payload);
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export const api = {
   health: () => request('/health'),
 
@@ -60,6 +87,10 @@ export const api = {
   getContract: (id) => request(`/api/documents/${id}`),
   listComparisons: () => request('/api/documents/diffs'),
   getComparison: (id) => request(`/api/documents/diffs/${id}`),
+  downloadContractReport: (id, fileName) =>
+    downloadFile(`/api/documents/${id}/report`, `LexiClear-Analysis-${fileName || id}.pdf`),
+  downloadComparisonReport: (id, label) =>
+    downloadFile(`/api/documents/diffs/${id}/report`, `LexiClear-Comparison-${label || id}.pdf`),
 
   askQuestion: (contractId, question) =>
     request(`/api/chat/${contractId}`, { method: 'POST', body: { question } }),

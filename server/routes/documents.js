@@ -9,6 +9,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { parsePdfBuffer, chunkText } from '../services/pdfService.js';
 import { sanitizeExtractedText } from '../utils/sanitize.js';
 import { summarizeContract, diffContracts, embedBatch } from '../services/geminiService.js';
+import { generateContractReport, generateComparisonReport } from '../services/reportService.js';
 
 const router = Router();
 
@@ -157,6 +158,22 @@ router.get(
 );
 
 router.get(
+  '/diffs/:id/report',
+  asyncHandler(async (req, res) => {
+    const comparison = await Comparison.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!comparison) return res.status(404).json({ error: 'Comparison not found.' });
+
+    const pdfBuffer = await generateComparisonReport(comparison);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="LexiClear-Comparison-${comparison._id}.pdf"`
+    );
+    res.send(pdfBuffer);
+  })
+);
+
+router.get(
   '/',
   asyncHandler(async (req, res) => {
     const contracts = await Contract.find({ owner: req.user._id }).sort({ createdAt: -1 });
@@ -170,6 +187,19 @@ router.get(
     const contract = await Contract.findOne({ _id: req.params.id, owner: req.user._id });
     if (!contract) return res.status(404).json({ error: 'Contract not found.' });
     res.json({ contract: serializeContract(contract) });
+  })
+);
+
+router.get(
+  '/:id/report',
+  asyncHandler(async (req, res) => {
+    const contract = await Contract.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!contract) return res.status(404).json({ error: 'Contract not found.' });
+
+    const pdfBuffer = await generateContractReport(serializeContract(contract));
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="LexiClear-Analysis-${contract._id}.pdf"`);
+    res.send(pdfBuffer);
   })
 );
 
