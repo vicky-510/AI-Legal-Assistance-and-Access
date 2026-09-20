@@ -5,6 +5,8 @@
 
 LexiClear AI lets anyone upload a contract PDF and get a plain-English executive summary, a clause-by-clause risk breakdown, a side-by-side semantic diff between two contract versions, and an interactive Q&A chat that grounds every answer in a verbatim quote from the document.
 
+![LexiClear AI architecture and tech stack](docs/architecture.webp)
+
 ---
 
 ## 1. Approach & System Architecture
