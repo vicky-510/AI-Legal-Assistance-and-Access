@@ -6,7 +6,7 @@
 
 **Website URL:** https://lexiclearai.netlify.app/
 
-**Built with:** Developed using **Claude Sonnet** (Anthropic) as the AI coding assistant, with **Google Gemini** (latest Flash-tier models, via a 3-tier fallback chain) as the in-app AI engine powering document analysis, comparison, and citation-backed Q&A.
+**Built with:** Developed using **Claude Sonnet** (Anthropic) as the AI coding assistant inside **Antigravity** (Google's agentic IDE), with **Google Gemini** (latest Flash-tier models, via a 3-tier fallback chain) as the in-app AI engine powering document analysis, comparison, and citation-backed Q&A.
 
 LexiClear AI lets anyone upload a contract PDF and get a plain-English executive summary, a clause-by-clause risk breakdown, a side-by-side semantic diff between two contract versions, and an interactive Q&A chat that grounds every answer in a verbatim quote from the document.
 
