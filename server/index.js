@@ -28,6 +28,15 @@ export function createApp() {
   app.use(cookieParser());
   app.use(apiLimiter);
 
+  app.get('/', (req, res) => {
+    res.json({
+      name: 'LexiClear AI API',
+      status: 'ok',
+      docs: 'https://github.com/vicky-510/AI-Legal-Assistance-and-Access',
+      health: '/health',
+    });
+  });
+
   app.use('/health', healthRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/documents', documentRoutes);

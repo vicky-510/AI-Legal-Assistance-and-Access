@@ -28,6 +28,17 @@ describe('security headers', () => {
   });
 });
 
+describe('GET /', () => {
+  const app = createApp();
+
+  it('returns a friendly API landing response instead of a 404', async () => {
+    const res = await request(app).get('/');
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('LexiClear AI API');
+    expect(res.body.health).toBe('/health');
+  });
+});
+
 describe('unknown routes', () => {
   const app = createApp();
 
