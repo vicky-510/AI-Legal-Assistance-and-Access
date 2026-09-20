@@ -20,6 +20,14 @@ GlobalWorkerOptions.workerSrc = pathToFileURL(
   require.resolve('pdfjs-dist/legacy/build/pdf.worker.mjs')
 ).href;
 
+// Standard font fallback data (used when a PDF references a standard font
+// like Helvetica without embedding it). In Node, pdfjs-dist's font-data
+// factory reads this via fs given a plain directory path — not a file://
+// URL, which its fetch-based factory can't read under Node.
+const STANDARD_FONT_DATA_URL = require
+  .resolve('pdfjs-dist/standard_fonts/LiberationSans-Regular.ttf')
+  .replace(/LiberationSans-Regular\.ttf$/, '');
+
 export class PdfParseError extends Error {}
 
 /**
@@ -46,6 +54,7 @@ export async function parsePdfBuffer(buffer) {
       useWorkerFetch: false,
       isEvalSupported: false,
       disableFontFace: true,
+      standardFontDataUrl: STANDARD_FONT_DATA_URL,
     });
     doc = await loadingTask.promise;
   } catch (err) {
