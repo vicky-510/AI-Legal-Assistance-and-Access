@@ -1,8 +1,45 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, Trash2, RotateCcw, Users, FileText, Activity } from 'lucide-react';
+import { ShieldCheck, Trash2, RotateCcw, KeyRound, Copy, X, Users, FileText, Activity } from 'lucide-react';
 import { api, ApiError } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../components/Toast.jsx';
+
+function ResetPasswordModal({ result, onClose }) {
+  const { push } = useToast();
+  if (!result) return null;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(result.newPassword);
+      push('Password copied to clipboard.', 'success');
+    } catch {
+      push('Could not copy automatically — select and copy manually.', 'error');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-semibold">Password Reset</h3>
+          <button onClick={onClose} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="mb-1 text-xs text-slate-500 dark:text-slate-400">{result.email}</p>
+        <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+          <code className="flex-1 select-all break-all text-sm font-medium">{result.newPassword}</code>
+          <button onClick={copy} className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700">
+            <Copy className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
+          This password is shown only once — copy it now and share it securely with the user.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function StatCard({ icon: Icon, label, value }) {
   return (
@@ -25,6 +62,7 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [resetResult, setResetResult] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -64,6 +102,16 @@ export default function AdminDashboard() {
       push('Sessions revoked for this user.', 'success');
     } catch (err) {
       push(err instanceof ApiError ? err.message : 'Failed to revoke sessions.', 'error');
+    }
+  };
+
+  const handleResetPassword = async (id) => {
+    if (!window.confirm('Reset this user\'s password? Their current password will stop working immediately.')) return;
+    try {
+      const result = await api.adminResetPassword(id);
+      setResetResult(result);
+    } catch (err) {
+      push(err instanceof ApiError ? err.message : 'Failed to reset password.', 'error');
     }
   };
 
@@ -138,6 +186,13 @@ export default function AdminDashboard() {
                   <td className="px-6 py-3">
                     <div className="flex justify-end gap-2">
                       <button
+                        onClick={() => handleResetPassword(u.id)}
+                        title="Reset password"
+                        className="rounded-md p-1.5 text-slate-400 hover:bg-indigo-500/10 hover:text-indigo-500"
+                      >
+                        <KeyRound className="h-4 w-4" />
+                      </button>
+                      <button
                         onClick={() => handleRevoke(u.id)}
                         title="Revoke sessions"
                         className="rounded-md p-1.5 text-slate-400 hover:bg-amber-500/10 hover:text-amber-500"
@@ -191,6 +246,8 @@ export default function AdminDashboard() {
           </table>
         </div>
       </div>
+
+      <ResetPasswordModal result={resetResult} onClose={() => setResetResult(null)} />
     </div>
   );
 }

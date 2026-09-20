@@ -1,8 +1,20 @@
+import crypto from 'crypto';
 import { Router } from 'express';
 import User from '../models/User.js';
 import Contract from '../models/Contract.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+
+// Generates a strong random password: 16 chars drawn from a mixed
+// alphanumeric+symbol set, via crypto.randomInt (CSPRNG, not Math.random).
+function generateStrongPassword(length = 16) {
+  const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
+  let password = '';
+  for (let i = 0; i < length; i += 1) {
+    password += charset[crypto.randomInt(charset.length)];
+  }
+  return password;
+}
 
 const router = Router();
 
@@ -47,6 +59,24 @@ router.post(
     user.tokenVersion += 1;
     await user.save();
     res.json({ success: true });
+  })
+);
+
+// Resets a user's password to a freshly generated strong random value and
+// returns it once (it is never stored in plaintext or logged) — also
+// revokes existing sessions since the credential just changed under them.
+router.post(
+  '/users/:id/reset-password',
+  asyncHandler(async (req, res) => {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    const newPassword = generateStrongPassword();
+    await user.setPassword(newPassword);
+    user.tokenVersion += 1;
+    await user.save();
+
+    res.json({ email: user.email, newPassword });
   })
 );
 

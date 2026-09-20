@@ -65,6 +65,7 @@ export const api = {
   adminListUsers: () => request('/api/admin/users'),
   adminSetRole: (id, role) => request(`/api/admin/users/${id}/role`, { method: 'PATCH', body: { role } }),
   adminRevokeUser: (id) => request(`/api/admin/users/${id}/revoke`, { method: 'POST' }),
+  adminResetPassword: (id) => request(`/api/admin/users/${id}/reset-password`, { method: 'POST' }),
   adminDeleteUser: (id) => request(`/api/admin/users/${id}`, { method: 'DELETE' }),
   adminListDocuments: () => request('/api/admin/documents'),
   adminStats: () => request('/api/admin/stats'),
