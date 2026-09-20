@@ -84,7 +84,25 @@ npm run dev              # http://localhost:5173
 
 Run backend tests: `cd server && npm test`.
 
-## 6. Key Assumptions & Disclaimers
+## 6. Deploying (Frontend + Backend, via GitHub)
+
+The frontend and backend deploy as **two separate projects**, both connected to this GitHub repo. Netlify/Vercel are static/serverless platforms; the backend runs as a Vercel serverless function (`server/api/index.js` + `server/vercel.json`) rather than a long-lived process — see the caveats documented at the top of `server/api/index.js` (per-instance rate limiting, cold starts, function timeout risk on slow Gemini calls).
+
+**Backend → Vercel:**
+1. New Project → import this repo → **Root Directory: `server`**
+2. Vercel auto-detects `vercel.json`; no build command needed
+3. Add every var from `server/.env.example` in Project Settings → Environment Variables (`GEMINI_API_KEY`, `MONGO_URI`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `CLIENT_ORIGIN` — set this to your frontend's deployed URL, not localhost)
+4. Deploy; note the resulting URL (e.g. `https://lexiclear-api.vercel.app`)
+
+**Frontend → Vercel or Netlify:**
+1. New Project/Site → import this repo → **Root Directory / Base Directory: `client`**
+2. Build command: `npm run build`, Output/Publish directory: `dist`
+3. Add env var `VITE_API_URL` = your backend's deployed URL from the step above
+4. Deploy
+
+Both platforms auto-redeploy on every push to `main`. Update `CLIENT_ORIGIN` on the backend if the frontend's URL ever changes (CORS is locked to a single origin since cookies are sent with `credentials: true`).
+
+## 7. Key Assumptions & Disclaimers
 
 - **Not legal advice.** LexiClear AI provides automated document assistance for informational purposes only. It does not constitute legal advice or binding legal counsel — this disclaimer is shown persistently in the UI. Consult a qualified attorney for decisions with legal consequences.
 - Text-only PDFs are supported; scanned/image-only documents with no extractable text are rejected with a clear error rather than silently producing an empty analysis.

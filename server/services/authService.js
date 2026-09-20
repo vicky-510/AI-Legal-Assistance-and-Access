@@ -17,16 +17,28 @@ export function verifyToken(token) {
 export const AUTH_COOKIE_NAME = 'lexiclear_token';
 
 export function setAuthCookie(res, token) {
+  const isProd = env.nodeEnv === 'production';
   res.cookie(AUTH_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: env.nodeEnv === 'production',
-    sameSite: 'lax',
+    // Frontend and backend are deployed on separate domains in production
+    // (e.g. two Vercel projects), so the cookie must be sent cross-site.
+    // sameSite: 'none' requires secure: true, which is fine since
+    // production is always served over HTTPS.
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 }
 
 export function clearAuthCookie(res) {
-  res.clearCookie(AUTH_COOKIE_NAME);
+  const isProd = env.nodeEnv === 'production';
+  // clearCookie must be called with the same attributes the cookie was set
+  // with (secure/sameSite) or some browsers won't actually delete it.
+  res.clearCookie(AUTH_COOKIE_NAME, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+  });
 }
 
 /**

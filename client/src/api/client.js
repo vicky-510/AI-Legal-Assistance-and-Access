@@ -1,4 +1,8 @@
-const BASE = '';
+// In dev, Vite's proxy (vite.config.js) forwards relative /api and /health
+// calls to localhost:5000, so BASE stays empty. In production the frontend
+// and backend are deployed separately (e.g. Vercel + Vercel), so BASE must
+// point at the deployed backend's absolute URL via VITE_API_URL.
+const BASE = import.meta.env.VITE_API_URL || '';
 
 class ApiError extends Error {
   constructor(message, status, payload) {
