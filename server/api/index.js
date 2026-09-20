@@ -25,17 +25,32 @@ const app = createApp();
 let readyPromise = null;
 function ensureReady() {
   if (!readyPromise) {
-    readyPromise = connectMongo()
-      .then(() => ensureBootstrapAdmin())
-      .catch((err) => {
-        console.error('[api] Startup task failed:', err.message);
-        readyPromise = null; // allow retry on the next invocation
-      });
+    readyPromise = connectMongo().then(() => ensureBootstrapAdmin());
+    // On failure, clear the cache so the *next* invocation gets a fresh
+    // attempt instead of being stuck replaying a stale rejection — but
+    // still let this invocation's caller see the failure. Previously this
+    // error was swallowed here, which let requests through with an
+    // unready Mongoose connection; on a slow cold start that surfaced as
+    // an intermittent "Internal server error" once Mongoose's command
+    // buffer timeout (10s) expired deep inside a route handler, instead
+    // of a clear, fast, retry-me failure at the top.
+    readyPromise.catch((err) => {
+      console.error('[api] Startup task failed:', err.message);
+      readyPromise = null;
+    });
   }
   return readyPromise;
 }
 
 export default async function handler(req, res) {
-  await ensureReady();
+  try {
+    await ensureReady();
+  } catch (err) {
+    res.statusCode = 503;
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Retry-After', '2');
+    res.end(JSON.stringify({ error: 'Server is starting up — please retry in a moment.' }));
+    return;
+  }
   app(req, res);
 }
