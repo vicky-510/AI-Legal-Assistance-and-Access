@@ -160,6 +160,7 @@ const CHAT_SCHEMA = {
       items: {
         type: 'object',
         properties: {
+          source: { type: 'string', description: 'Which document the quote is from, e.g. "A" or "B", if applicable.' },
           pageNumber: { type: 'integer' },
           quote: { type: 'string' },
         },
@@ -173,16 +174,26 @@ const CHAT_SCHEMA = {
 
 export async function answerQuestion(question, contextChunks) {
   const contextBlock = contextChunks
-    .map((c, i) => `[Chunk ${i + 1} | Page ${c.pageNumber ?? 'N/A'}]\n${c.text}`)
+    .map((c, i) => {
+      const label = c.source ? `Contract ${c.source}` : 'Document';
+      return `[Chunk ${i + 1} | ${label} | Page ${c.pageNumber ?? 'N/A'}]\n${c.text}`;
+    })
     .join('\n\n');
+
+  const hasMultipleSources = contextChunks.some((c) => c.source);
 
   return generateStructured({
     systemInstruction:
       SYSTEM_INSTRUCTION_BASE +
-      ' Answer the user question using ONLY the provided context chunks retrieved from the document. ' +
+      ' Answer the user question using ONLY the provided context chunks retrieved from the document(s). ' +
       'Every claim in your answer must be backed by at least one citation with a verbatim quote and, ' +
-      'when known, its page number. If the context does not contain the answer, set ' +
-      'isAnswerableFromDocument to false and say so plainly rather than guessing.',
+      'when known, its page number.' +
+      (hasMultipleSources
+        ? ' The context spans two contracts labeled "Contract A" and "Contract B" — set each citation\'s ' +
+          'source field to "A" or "B" to indicate which one it came from.'
+        : '') +
+      ' If the context does not contain the answer, set isAnswerableFromDocument to false and say so ' +
+      'plainly rather than guessing.',
     prompt: `RETRIEVED CONTEXT:\n"""\n${contextBlock}\n"""\n\nUSER QUESTION: ${question}`,
     schema: CHAT_SCHEMA,
   });

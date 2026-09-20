@@ -12,6 +12,36 @@ const changeSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const chunkSchema = new mongoose.Schema(
+  {
+    source: { type: String, enum: ['A', 'B'], required: true },
+    text: { type: String, required: true },
+    pageNumber: { type: Number, default: null },
+    chunkIndex: { type: Number, required: true },
+    embedding: { type: [Number], default: undefined, select: false },
+  },
+  { _id: false }
+);
+
+const chatMessageSchema = new mongoose.Schema(
+  {
+    role: { type: String, enum: ['user', 'assistant'], required: true },
+    content: { type: String, required: true },
+    citations: {
+      type: [
+        {
+          source: String,
+          pageNumber: Number,
+          quote: String,
+        },
+      ],
+      default: [],
+    },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
 const comparisonSchema = new mongoose.Schema(
   {
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -22,6 +52,8 @@ const comparisonSchema = new mongoose.Schema(
     pageCountB: { type: Number, default: 0 },
     changes: { type: [changeSchema], default: [] },
     overallAssessment: { type: String, required: true },
+    chunks: { type: [chunkSchema], default: [], select: false },
+    chatHistory: { type: [chatMessageSchema], default: [] },
   },
   { timestamps: true }
 );

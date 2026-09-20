@@ -87,7 +87,7 @@ router.post(
       .update(`${parsedA.documentHash}:${parsedB.documentHash}`)
       .digest('hex');
 
-    const cached = await Comparison.findOne({ owner: req.user._id, comparisonHash });
+    const cached = await Comparison.findOne({ owner: req.user._id, comparisonHash }).select('+chunks');
     if (cached) {
       return res.json({ comparison: serializeComparison(cached), cached: true });
     }
@@ -96,6 +96,18 @@ router.post(
     const textB = sanitizeExtractedText(parsedB.text);
 
     const diff = await diffContracts(textA, textB);
+
+    const chunksA = chunkText(textA).map((c) => ({ ...c, source: 'A' }));
+    const chunksB = chunkText(textB).map((c) => ({ ...c, source: 'B' }));
+    const allChunks = [...chunksA, ...chunksB];
+
+    let embeddedChunks = allChunks;
+    try {
+      const vectors = await embedBatch(allChunks.map((c) => c.text));
+      embeddedChunks = allChunks.map((c, i) => ({ ...c, embedding: vectors[i] }));
+    } catch (err) {
+      console.warn('[documents] Comparison embedding failed, chat will use keyword fallback:', err.message);
+    }
 
     const comparison = await Comparison.create({
       owner: req.user._id,
@@ -106,6 +118,7 @@ router.post(
       pageCountB: parsedB.pageCount,
       changes: diff.changes,
       overallAssessment: diff.overallAssessment,
+      chunks: embeddedChunks,
     });
 
     res.status(201).json({ comparison: serializeComparison(comparison), cached: false });
@@ -157,6 +170,7 @@ export function serializeComparison(comparison) {
       changes: comparison.changes,
       overallAssessment: comparison.overallAssessment,
     },
+    chatHistory: comparison.chatHistory,
     createdAt: comparison.createdAt,
   };
 }

@@ -1,6 +1,8 @@
 import { X } from 'lucide-react';
 import ContractDiff from './ContractDiff.jsx';
+import CitationChat from './CitationChat.jsx';
 import ErrorBoundary from './ErrorBoundary.jsx';
+import { api } from '../api/client.js';
 
 export default function ComparisonResult({ comparison, onClose }) {
   if (!comparison) return null;
@@ -28,6 +30,13 @@ export default function ComparisonResult({ comparison, onClose }) {
           pageCountA: comparison.pageCountA,
           pageCountB: comparison.pageCountB,
         }}
+      />
+      <CitationChat
+        key={comparison.id}
+        contractId={comparison.id}
+        ask={api.askComparisonQuestion}
+        initialHistory={comparison.chatHistory}
+        label="Ask about this comparison"
       />
     </ErrorBoundary>
   );

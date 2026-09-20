@@ -59,6 +59,8 @@ export const api = {
 
   askQuestion: (contractId, question) =>
     request(`/api/chat/${contractId}`, { method: 'POST', body: { question } }),
+  askComparisonQuestion: (comparisonId, question) =>
+    request(`/api/chat/comparison/${comparisonId}`, { method: 'POST', body: { question } }),
 
   adminListUsers: () => request('/api/admin/users'),
   adminSetRole: (id, role) => request(`/api/admin/users/${id}/role`, { method: 'PATCH', body: { role } }),

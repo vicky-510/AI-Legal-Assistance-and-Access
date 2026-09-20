@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Contract from '../models/Contract.js';
+import Comparison from '../models/Comparison.js';
 import { requireAuth } from '../middleware/auth.js';
 import { aiLimiter } from '../middleware/rateLimiter.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -12,6 +13,41 @@ const router = Router();
 router.use(requireAuth);
 
 const TOP_K = 5;
+
+router.post(
+  '/comparison/:comparisonId',
+  aiLimiter,
+  asyncHandler(async (req, res) => {
+    const { question } = req.body || {};
+    const cleanQuestion = sanitizeUserQuestion(question);
+    if (!cleanQuestion) {
+      return res.status(400).json({ error: 'A question is required.' });
+    }
+
+    const comparison = await Comparison.findOne({
+      _id: req.params.comparisonId,
+      owner: req.user._id,
+    }).select('+chunks');
+
+    if (!comparison) return res.status(404).json({ error: 'Comparison not found.' });
+    if (!comparison.chunks?.length) {
+      return res.status(422).json({ error: 'This comparison has no retrievable content indexed.' });
+    }
+
+    const relevantChunks = await retrieveTopChunks(cleanQuestion, comparison.chunks);
+    const result = await answerQuestion(cleanQuestion, relevantChunks);
+
+    comparison.chatHistory.push({ role: 'user', content: cleanQuestion });
+    comparison.chatHistory.push({
+      role: 'assistant',
+      content: result.answer,
+      citations: result.citations || [],
+    });
+    await comparison.save();
+
+    res.json(result);
+  })
+);
 
 router.post(
   '/:contractId',

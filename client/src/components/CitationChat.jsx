@@ -35,7 +35,9 @@ function ChatBubble({ message, onCiteClick }) {
                 title={c.quote}
               >
                 <Quote className="h-3 w-3" />
-                {c.pageNumber ? `p.${c.pageNumber}` : 'source'}
+                {[c.source ? `Contract ${c.source}` : null, c.pageNumber ? `p.${c.pageNumber}` : null]
+                  .filter(Boolean)
+                  .join(' · ') || 'source'}
               </button>
             ))}
           </div>
@@ -45,7 +47,14 @@ function ChatBubble({ message, onCiteClick }) {
   );
 }
 
-export default function CitationChat({ contractId, initialHistory = [], onCiteClick }) {
+export default function CitationChat({
+  contractId,
+  ask,
+  initialHistory = [],
+  onCiteClick,
+  label = 'Ask about this contract',
+}) {
+  const askFn = ask || ((id, question) => api.askQuestion(id, question));
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState(initialHistory);
   const [input, setInput] = useState('');
@@ -67,7 +76,7 @@ export default function CitationChat({ contractId, initialHistory = [], onCiteCl
     setSending(true);
 
     try {
-      const result = await api.askQuestion(contractId, question);
+      const result = await askFn(contractId, question);
       setMessages((m) => [...m, { role: 'assistant', content: result.answer, citations: result.citations }]);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Network error — please retry.';
@@ -89,7 +98,7 @@ export default function CitationChat({ contractId, initialHistory = [], onCiteCl
         className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-5 py-3 text-sm font-medium text-white shadow-glow transition-transform hover:scale-105"
       >
         <MessageSquare className="h-4 w-4" />
-        Ask about this contract
+        {label}
       </button>
 
       {createPortal(
