@@ -1,7 +1,10 @@
 # LexiClear AI
 
 **Vertical:** AI for Legal Assistance & Access
+
 **Persona:** A legal-document intelligence copilot that simplifies contracts, compares versions, and answers questions with citations back to the source text.
+
+**Website URL:** https://lexiclearai.netlify.app/
 
 LexiClear AI lets anyone upload a contract PDF and get a plain-English executive summary, a clause-by-clause risk breakdown, a side-by-side semantic diff between two contract versions, and an interactive Q&A chat that grounds every answer in a verbatim quote from the document.
 
