@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { X } from 'lucide-react';
 import FileUploader from '../components/FileUploader.jsx';
 import ContractDiff, { DiffSkeleton } from '../components/ContractDiff.jsx';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
@@ -8,23 +9,30 @@ import { useToast } from '../components/Toast.jsx';
 export default function Diff() {
   const [fileA, setFileA] = useState(null);
   const [fileB, setFileB] = useState(null);
-  const [result, setResult] = useState(null);
+  const [comparison, setComparison] = useState(null);
   const [loading, setLoading] = useState(false);
   const { push } = useToast();
 
   const handleCompare = async () => {
     if (!fileA || !fileB) return;
     setLoading(true);
-    setResult(null);
+    setComparison(null);
     try {
-      const data = await api.diffDocuments(fileA, fileB);
-      setResult(data);
+      const { comparison: result, cached } = await api.diffDocuments(fileA, fileB);
+      setComparison(result);
+      if (cached) push('Loaded from cache — 0 API tokens used.', 'success');
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Failed to compare documents. Please retry.';
       push(message, 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleClose = () => {
+    setComparison(null);
+    setFileA(null);
+    setFileB(null);
   };
 
   return (
@@ -36,23 +44,41 @@ export default function Diff() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 md:grid-cols-2">
-        <FileUploader label="Contract A (original)" file={fileA} onFileSelect={setFileA} disabled={loading} />
-        <FileUploader label="Contract B (revised)" file={fileB} onFileSelect={setFileB} disabled={loading} />
-        <button
-          onClick={handleCompare}
-          disabled={!fileA || !fileB || loading}
-          className="col-span-full rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 py-2.5 text-sm font-medium text-white shadow-glow transition-opacity disabled:opacity-40"
-        >
-          {loading ? 'Comparing…' : 'Compare Contracts'}
-        </button>
-      </div>
+      {!comparison && (
+        <div className="grid grid-cols-1 gap-4 rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 md:grid-cols-2">
+          <FileUploader label="Contract A (original)" file={fileA} onFileSelect={setFileA} disabled={loading} />
+          <FileUploader label="Contract B (revised)" file={fileB} onFileSelect={setFileB} disabled={loading} />
+          <button
+            onClick={handleCompare}
+            disabled={!fileA || !fileB || loading}
+            className="col-span-full rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 py-2.5 text-sm font-medium text-white shadow-glow transition-opacity disabled:opacity-40"
+          >
+            {loading ? 'Comparing…' : 'Compare Contracts'}
+          </button>
+        </div>
+      )}
 
       {loading && <DiffSkeleton />}
 
-      {result && (
-        <ErrorBoundary onReset={() => setResult(null)}>
-          <ContractDiff diff={result.diff} meta={result.meta} />
+      {comparison && (
+        <ErrorBoundary onReset={handleClose}>
+          <div className="flex justify-end">
+            <button
+              onClick={handleClose}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+            >
+              <X className="h-3.5 w-3.5" /> Close
+            </button>
+          </div>
+          <ContractDiff
+            diff={comparison.diff}
+            meta={{
+              fileNameA: comparison.fileNameA,
+              fileNameB: comparison.fileNameB,
+              pageCountA: comparison.pageCountA,
+              pageCountB: comparison.pageCountB,
+            }}
+          />
         </ErrorBoundary>
       )}
     </div>

@@ -1,5 +1,7 @@
+import crypto from 'crypto';
 import { Router } from 'express';
 import Contract from '../models/Contract.js';
+import Comparison from '../models/Comparison.js';
 import { uploadPdf } from '../middleware/upload.js';
 import { requireAuth } from '../middleware/auth.js';
 import { aiLimiter } from '../middleware/rateLimiter.js';
@@ -80,20 +82,50 @@ router.post(
       parsePdfBuffer(fileB.buffer),
     ]);
 
+    const comparisonHash = crypto
+      .createHash('sha256')
+      .update(`${parsedA.documentHash}:${parsedB.documentHash}`)
+      .digest('hex');
+
+    const cached = await Comparison.findOne({ owner: req.user._id, comparisonHash });
+    if (cached) {
+      return res.json({ comparison: serializeComparison(cached), cached: true });
+    }
+
     const textA = sanitizeExtractedText(parsedA.text);
     const textB = sanitizeExtractedText(parsedB.text);
 
     const diff = await diffContracts(textA, textB);
 
-    res.json({
-      diff,
-      meta: {
-        fileNameA: fileA.originalname,
-        fileNameB: fileB.originalname,
-        pageCountA: parsedA.pageCount,
-        pageCountB: parsedB.pageCount,
-      },
+    const comparison = await Comparison.create({
+      owner: req.user._id,
+      comparisonHash,
+      fileNameA: fileA.originalname,
+      fileNameB: fileB.originalname,
+      pageCountA: parsedA.pageCount,
+      pageCountB: parsedB.pageCount,
+      changes: diff.changes,
+      overallAssessment: diff.overallAssessment,
     });
+
+    res.status(201).json({ comparison: serializeComparison(comparison), cached: false });
+  })
+);
+
+router.get(
+  '/diffs',
+  asyncHandler(async (req, res) => {
+    const comparisons = await Comparison.find({ owner: req.user._id }).sort({ createdAt: -1 });
+    res.json({ comparisons: comparisons.map(serializeComparison) });
+  })
+);
+
+router.get(
+  '/diffs/:id',
+  asyncHandler(async (req, res) => {
+    const comparison = await Comparison.findOne({ _id: req.params.id, owner: req.user._id });
+    if (!comparison) return res.status(404).json({ error: 'Comparison not found.' });
+    res.json({ comparison: serializeComparison(comparison) });
   })
 );
 
@@ -113,6 +145,21 @@ router.get(
     res.json({ contract: serializeContract(contract) });
   })
 );
+
+export function serializeComparison(comparison) {
+  return {
+    id: comparison._id.toString(),
+    fileNameA: comparison.fileNameA,
+    fileNameB: comparison.fileNameB,
+    pageCountA: comparison.pageCountA,
+    pageCountB: comparison.pageCountB,
+    diff: {
+      changes: comparison.changes,
+      overallAssessment: comparison.overallAssessment,
+    },
+    createdAt: comparison.createdAt,
+  };
+}
 
 export function serializeContract(contract) {
   return {

@@ -54,6 +54,8 @@ export const api = {
   },
   listContracts: () => request('/api/documents'),
   getContract: (id) => request(`/api/documents/${id}`),
+  listComparisons: () => request('/api/documents/diffs'),
+  getComparison: (id) => request(`/api/documents/diffs/${id}`),
 
   askQuestion: (contractId, question) =>
     request(`/api/chat/${contractId}`, { method: 'POST', body: { question } }),
