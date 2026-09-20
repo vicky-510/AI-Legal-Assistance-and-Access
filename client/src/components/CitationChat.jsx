@@ -98,7 +98,7 @@ export default function CitationChat({ contractId, initialHistory = [], onCiteCl
       >
         <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setOpen(false)} />
         <div
-          className={`absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out dark:bg-slate-900 ${
+          className={`fixed inset-y-0 right-0 top-0 z-50 flex h-screen w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl transition-transform duration-300 ease-in-out dark:border-slate-800 dark:bg-slate-900 ${
             open ? 'translate-x-0' : 'translate-x-full'
           }`}
         >
