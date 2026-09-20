@@ -46,12 +46,19 @@ function HealthPill() {
     down: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
   };
 
+  const labels = {
+    checking: 'Checking…',
+    healthy: 'Live',
+    degraded: 'Degraded',
+    down: 'Down for maintenance',
+  };
+
   return (
     <span
       className={`hidden items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium sm:inline-flex ${styles[status]}`}
     >
       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
-      {status === 'checking' ? 'Checking…' : status === 'healthy' ? 'All systems go' : status}
+      {labels[status]}
     </span>
   );
 }
