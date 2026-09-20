@@ -1,12 +1,21 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Scale, FileText, GitCompareArrows, ShieldCheck, LogOut, User as UserIcon } from 'lucide-react';
+import {
+  Scale,
+  FileText,
+  GitCompareArrows,
+  History,
+  ShieldCheck,
+  LogOut,
+  User as UserIcon,
+} from 'lucide-react';
 import { api } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const TABS = [
   { to: '/', label: 'Analyze', icon: FileText, end: true },
   { to: '/diff', label: 'Compare', icon: GitCompareArrows },
+  { to: '/history', label: 'History', icon: History },
 ];
 
 function HealthPill() {
