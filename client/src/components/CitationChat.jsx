@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { MessageSquare, X, Send, Quote, AlertCircle } from 'lucide-react';
 import { api, ApiError } from '../api/client.js';
 
@@ -91,17 +92,18 @@ export default function CitationChat({ contractId, initialHistory = [], onCiteCl
         Ask about this contract
       </button>
 
-      <div
-        className={`fixed inset-0 z-50 transition-opacity duration-300 ${
-          open ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
-        }`}
-      >
-        <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setOpen(false)} />
+      {createPortal(
         <div
-          className={`fixed inset-y-0 right-0 top-0 z-50 flex h-screen w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl transition-transform duration-300 ease-in-out dark:border-slate-800 dark:bg-slate-900 ${
-            open ? 'translate-x-0' : 'translate-x-full'
+          className={`fixed inset-0 z-50 transition-opacity duration-300 ${
+            open ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
           }`}
         >
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          <div
+            className={`fixed inset-y-0 right-0 top-0 z-50 flex h-screen w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl transition-transform duration-300 ease-in-out dark:border-slate-800 dark:bg-slate-900 ${
+              open ? 'translate-x-0' : 'translate-x-full'
+            }`}
+          >
           <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800">
             <div>
               <h3 className="font-semibold">Citation-Backed Q&amp;A</h3>
@@ -158,7 +160,9 @@ export default function CitationChat({ contractId, initialHistory = [], onCiteCl
             </div>
           </div>
         </div>
-      </div>
+        </div>,
+        document.body
+      )}
     </>
   );
 }
