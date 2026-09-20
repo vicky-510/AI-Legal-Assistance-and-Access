@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldAlert, History } from 'lucide-react';
 import FileUploader from '../components/FileUploader.jsx';
 import ExecutiveSummary, { SummarySkeleton } from '../components/ExecutiveSummary.jsx';
 import CitationChat from '../components/CitationChat.jsx';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
+import DocumentHistory from '../components/DocumentHistory.jsx';
 import { api, ApiError } from '../api/client.js';
 import { useToast } from '../components/Toast.jsx';
 
@@ -11,6 +12,7 @@ export default function Analyze() {
   const [file, setFile] = useState(null);
   const [contract, setContract] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [historyKey, setHistoryKey] = useState(0);
   const { push } = useToast();
 
   const handleAnalyze = async () => {
@@ -21,9 +23,24 @@ export default function Analyze() {
       const { contract: result, cached } = await api.analyzeDocument(file);
       setContract(result);
       if (cached) push('Loaded from cache — 0 API tokens used.', 'success');
+      else setHistoryKey((k) => k + 1);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Failed to analyze document. Please retry.';
       push(message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectPrevious = async (id) => {
+    setLoading(true);
+    setContract(null);
+    try {
+      const { contract: result } = await api.getContract(id);
+      setContract(result);
+      setFile(null);
+    } catch (err) {
+      push(err instanceof ApiError ? err.message : 'Failed to load document.', 'error');
     } finally {
       setLoading(false);
     }
@@ -65,8 +82,20 @@ export default function Analyze() {
       {contract && (
         <ErrorBoundary onReset={() => setContract(null)}>
           <ExecutiveSummary contract={contract} />
-          <CitationChat contractId={contract.id} initialHistory={contract.chatHistory} />
+          <CitationChat key={contract.id} contractId={contract.id} initialHistory={contract.chatHistory} />
         </ErrorBoundary>
+      )}
+
+      {!loading && (
+        <div>
+          <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <History className="h-4 w-4" />
+            Recent Documents
+          </h3>
+          <ErrorBoundary>
+            <DocumentHistory onSelect={handleSelectPrevious} refreshKey={historyKey} />
+          </ErrorBoundary>
+        </div>
       )}
     </div>
   );
