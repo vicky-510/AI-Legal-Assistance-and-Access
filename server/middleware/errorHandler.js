@@ -26,6 +26,6 @@ export function errorHandler(err, req, res, next) {
 
   res.status(err.status || 500).json({
     error: 'Internal server error.',
-    ...(env.nodeEnv !== 'production' ? { detail: err.message } : {}),
+    detail: err.message,
   });
 }
