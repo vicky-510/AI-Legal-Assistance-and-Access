@@ -87,27 +87,25 @@ router.post(
       .update(`${parsedA.documentHash}:${parsedB.documentHash}`)
       .digest('hex');
 
-    const cached = await Comparison.findOne({ owner: req.user._id, comparisonHash }).select('+chunks');
-    if (cached) {
-      return res.json({ comparison: serializeComparison(cached), cached: true });
-    }
-
     const textA = sanitizeExtractedText(parsedA.text);
     const textB = sanitizeExtractedText(parsedB.text);
 
-    const diff = await diffContracts(textA, textB);
-
-    const chunksA = chunkText(textA).map((c) => ({ ...c, source: 'A' }));
-    const chunksB = chunkText(textB).map((c) => ({ ...c, source: 'B' }));
-    const allChunks = [...chunksA, ...chunksB];
-
-    let embeddedChunks = allChunks;
-    try {
-      const vectors = await embedBatch(allChunks.map((c) => c.text));
-      embeddedChunks = allChunks.map((c, i) => ({ ...c, embedding: vectors[i] }));
-    } catch (err) {
-      console.warn('[documents] Comparison embedding failed, chat will use keyword fallback:', err.message);
+    const cached = await Comparison.findOne({ owner: req.user._id, comparisonHash }).select('+chunks');
+    if (cached) {
+      // Backfills chunks for comparisons saved before Q&A chat existed on
+      // this feature — otherwise those older cache hits would have no
+      // retrievable content and every chat question on them would 422.
+      if (!cached.chunks?.length) {
+        cached.chunks = await buildComparisonChunks(textA, textB);
+        cached.fullTextA = textA;
+        cached.fullTextB = textB;
+        await cached.save();
+      }
+      return res.json({ comparison: serializeComparison(cached), cached: true });
     }
+
+    const diff = await diffContracts(textA, textB);
+    const embeddedChunks = await buildComparisonChunks(textA, textB);
 
     const comparison = await Comparison.create({
       owner: req.user._id,
@@ -118,12 +116,28 @@ router.post(
       pageCountB: parsedB.pageCount,
       changes: diff.changes,
       overallAssessment: diff.overallAssessment,
+      fullTextA: textA,
+      fullTextB: textB,
       chunks: embeddedChunks,
     });
 
     res.status(201).json({ comparison: serializeComparison(comparison), cached: false });
   })
 );
+
+export async function buildComparisonChunks(textA, textB) {
+  const chunksA = chunkText(textA).map((c) => ({ ...c, source: 'A' }));
+  const chunksB = chunkText(textB).map((c) => ({ ...c, source: 'B' }));
+  const allChunks = [...chunksA, ...chunksB];
+
+  try {
+    const vectors = await embedBatch(allChunks.map((c) => c.text));
+    return allChunks.map((c, i) => ({ ...c, embedding: vectors[i] }));
+  } catch (err) {
+    console.warn('[documents] Comparison embedding failed, chat will use keyword fallback:', err.message);
+    return allChunks;
+  }
+}
 
 router.get(
   '/diffs',

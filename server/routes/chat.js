@@ -7,6 +7,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { sanitizeUserQuestion } from '../utils/sanitize.js';
 import { answerQuestion, embedText } from '../services/geminiService.js';
 import { cosineSimilarity } from '../services/mongoService.js';
+import { buildComparisonChunks } from './documents.js';
 
 const router = Router();
 
@@ -27,11 +28,19 @@ router.post(
     const comparison = await Comparison.findOne({
       _id: req.params.comparisonId,
       owner: req.user._id,
-    }).select('+chunks');
+    }).select('+chunks +fullTextA +fullTextB');
 
     if (!comparison) return res.status(404).json({ error: 'Comparison not found.' });
+
+    // Self-heals comparisons saved before Q&A existed on this feature (no
+    // stored chunks) by rebuilding them from the retained sanitized text,
+    // so opening an old comparison from History doesn't hard-fail chat.
     if (!comparison.chunks?.length) {
-      return res.status(422).json({ error: 'This comparison has no retrievable content indexed.' });
+      if (!comparison.fullTextA || !comparison.fullTextB) {
+        return res.status(422).json({ error: 'This comparison has no retrievable content indexed.' });
+      }
+      comparison.chunks = await buildComparisonChunks(comparison.fullTextA, comparison.fullTextB);
+      await comparison.save();
     }
 
     const relevantChunks = await retrieveTopChunks(cleanQuestion, comparison.chunks);

@@ -52,6 +52,8 @@ const comparisonSchema = new mongoose.Schema(
     pageCountB: { type: Number, default: 0 },
     changes: { type: [changeSchema], default: [] },
     overallAssessment: { type: String, required: true },
+    fullTextA: { type: String, default: '', select: false },
+    fullTextB: { type: String, default: '', select: false },
     chunks: { type: [chunkSchema], default: [], select: false },
     chatHistory: { type: [chatMessageSchema], default: [] },
   },
