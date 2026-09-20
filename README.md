@@ -84,23 +84,23 @@ npm run dev              # http://localhost:5173
 
 Run backend tests: `cd server && npm test`.
 
-## 6. Deploying (Frontend + Backend, via GitHub)
+## 6. Deploying (Frontend on Netlify, Backend on Vercel, via GitHub)
 
-The frontend and backend deploy as **two separate projects**, both connected to this GitHub repo. Netlify/Vercel are static/serverless platforms; the backend runs as a Vercel serverless function (`server/api/index.js` + `server/vercel.json`) rather than a long-lived process — see the caveats documented at the top of `server/api/index.js` (per-instance rate limiting, cold starts, function timeout risk on slow Gemini calls).
+Both are separate projects connected to this same GitHub repo, each auto-redeploying on every push to `main`. The backend runs as a Vercel serverless function (`server/api/index.js` + `server/vercel.json`) rather than a long-lived process — see the caveats documented at the top of `server/api/index.js` (per-instance rate limiting, cold starts, function timeout risk on slow Gemini calls).
 
 **Backend → Vercel:**
 1. New Project → import this repo → **Root Directory: `server`**
 2. Vercel auto-detects `vercel.json`; no build command needed
-3. Add every var from `server/.env.example` in Project Settings → Environment Variables (`GEMINI_API_KEY`, `MONGO_URI`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `CLIENT_ORIGIN` — set this to your frontend's deployed URL, not localhost)
+3. Add every var from `server/.env.example` in Project Settings → Environment Variables (`GEMINI_API_KEY`, `MONGO_URI`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `CLIENT_ORIGIN` — set this to your Netlify frontend URL once you have it, e.g. `https://lexiclear.netlify.app`)
 4. Deploy; note the resulting URL (e.g. `https://lexiclear-api.vercel.app`)
 
-**Frontend → Vercel or Netlify:**
-1. New Project/Site → import this repo → **Root Directory / Base Directory: `client`**
-2. Build command: `npm run build`, Output/Publish directory: `dist`
-3. Add env var `VITE_API_URL` = your backend's deployed URL from the step above
-4. Deploy
+**Frontend → Netlify:**
+1. Add new site → Import an existing project → GitHub → this repo
+2. **Base directory: `client`** (Netlify picks up `client/netlify.toml` for the build command/publish dir and the SPA redirect rule React Router needs)
+3. Add env var `VITE_API_URL` = the backend URL from step 4 above (Site configuration → Environment variables)
+4. Deploy; note the resulting URL and go back to update `CLIENT_ORIGIN` on the Vercel backend with it
 
-Both platforms auto-redeploy on every push to `main`. Update `CLIENT_ORIGIN` on the backend if the frontend's URL ever changes (CORS is locked to a single origin since cookies are sent with `credentials: true`).
+Deploy the backend first with a placeholder `CLIENT_ORIGIN`, deploy the frontend, then update `CLIENT_ORIGIN` on the backend with the real Netlify URL and redeploy it — this is a one-time chicken-and-egg step since each side needs the other's URL. CORS is locked to a single origin because cookies are sent with `credentials: true`.
 
 ## 7. Key Assumptions & Disclaimers
 

@@ -1,0 +1,11 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# React Router uses client-side routing — without this, refreshing or
+# deep-linking to a route like /history or /diff returns Netlify's default
+# 404 instead of index.html (which is what actually renders the router).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
