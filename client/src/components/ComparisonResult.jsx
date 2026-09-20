@@ -62,6 +62,7 @@ export default function ComparisonResult({ comparison, onClose }) {
         key={comparison.id}
         contractId={comparison.id}
         ask={api.askComparisonQuestion}
+        deleteTurn={api.deleteComparisonChatTurn}
         initialHistory={comparison.chatHistory}
         label="Ask about this comparison"
       />

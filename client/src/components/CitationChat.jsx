@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { MessageSquare, X, Send, Quote, AlertCircle } from 'lucide-react';
+import { MessageSquare, X, Send, Quote, AlertCircle, Trash2 } from 'lucide-react';
 import { api, ApiError } from '../api/client.js';
 
 function TypingShimmer() {
@@ -13,10 +13,20 @@ function TypingShimmer() {
   );
 }
 
-function ChatBubble({ message, onCiteClick }) {
+function ChatBubble({ message, onCiteClick, onDelete, deleting }) {
   const isUser = message.role === 'user';
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`group flex items-start gap-1.5 ${isUser ? 'justify-end' : 'justify-start'}`}>
+      {!isUser && onDelete && (
+        <button
+          onClick={onDelete}
+          disabled={deleting}
+          title="Delete this question & answer"
+          className="mt-1 shrink-0 rounded-md p-1 text-slate-300 opacity-0 transition-opacity hover:bg-rose-500/10 hover:text-rose-500 disabled:opacity-40 group-hover:opacity-100 dark:text-slate-600"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      )}
       <div
         className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
           isUser
@@ -50,16 +60,19 @@ function ChatBubble({ message, onCiteClick }) {
 export default function CitationChat({
   contractId,
   ask,
+  deleteTurn,
   initialHistory = [],
   onCiteClick,
   label = 'Ask about this contract',
 }) {
   const askFn = ask || ((id, question) => api.askQuestion(id, question));
+  const deleteTurnFn = deleteTurn || ((id, turnIndex) => api.deleteChatTurn(id, turnIndex));
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState(initialHistory);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [deletingTurn, setDeletingTurn] = useState(null);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -89,6 +102,19 @@ export default function CitationChat({
   const retryLast = () => {
     setError('');
     send();
+  };
+
+  const handleDeleteTurn = async (assistantIndex) => {
+    const turnIndex = Math.floor(assistantIndex / 2);
+    setDeletingTurn(turnIndex);
+    try {
+      await deleteTurnFn(contractId, turnIndex);
+      setMessages((m) => m.filter((_, i) => i !== assistantIndex - 1 && i !== assistantIndex));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to delete — please retry.');
+    } finally {
+      setDeletingTurn(null);
+    }
   };
 
   return (
@@ -133,7 +159,13 @@ export default function CitationChat({
               </p>
             )}
             {messages.map((m, i) => (
-              <ChatBubble key={i} message={m} onCiteClick={onCiteClick} />
+              <ChatBubble
+                key={i}
+                message={m}
+                onCiteClick={onCiteClick}
+                onDelete={m.role === 'assistant' ? () => handleDeleteTurn(i) : undefined}
+                deleting={deletingTurn === Math.floor(i / 2)}
+              />
             ))}
             {sending && <TypingShimmer />}
           </div>

@@ -96,6 +96,10 @@ export const api = {
     request(`/api/chat/${contractId}`, { method: 'POST', body: { question } }),
   askComparisonQuestion: (comparisonId, question) =>
     request(`/api/chat/comparison/${comparisonId}`, { method: 'POST', body: { question } }),
+  deleteChatTurn: (contractId, turnIndex) =>
+    request(`/api/chat/${contractId}/turns/${turnIndex}`, { method: 'DELETE' }),
+  deleteComparisonChatTurn: (comparisonId, turnIndex) =>
+    request(`/api/chat/comparison/${comparisonId}/turns/${turnIndex}`, { method: 'DELETE' }),
 
   adminListUsers: () => request('/api/admin/users'),
   adminSetRole: (id, role) => request(`/api/admin/users/${id}/role`, { method: 'PATCH', body: { role } }),

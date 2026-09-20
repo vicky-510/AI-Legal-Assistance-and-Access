@@ -58,6 +58,32 @@ router.post(
   })
 );
 
+// Deletes a question+answer pair ("turn") from a comparison's chat history.
+// Messages are stored as consecutive [user, assistant] entries, so a turn
+// index maps to array positions [index*2, index*2+1].
+router.delete(
+  '/comparison/:comparisonId/turns/:turnIndex',
+  asyncHandler(async (req, res) => {
+    const turnIndex = Number(req.params.turnIndex);
+    if (!Number.isInteger(turnIndex) || turnIndex < 0) {
+      return res.status(400).json({ error: 'Invalid turn index.' });
+    }
+
+    const comparison = await Comparison.findOne({ _id: req.params.comparisonId, owner: req.user._id });
+    if (!comparison) return res.status(404).json({ error: 'Comparison not found.' });
+
+    const start = turnIndex * 2;
+    if (start >= comparison.chatHistory.length) {
+      return res.status(404).json({ error: 'Chat turn not found.' });
+    }
+
+    comparison.chatHistory.splice(start, 2);
+    await comparison.save();
+
+    res.json({ chatHistory: comparison.chatHistory });
+  })
+);
+
 router.post(
   '/:contractId',
   aiLimiter,
@@ -90,6 +116,29 @@ router.post(
     await contract.save();
 
     res.json(result);
+  })
+);
+
+router.delete(
+  '/:contractId/turns/:turnIndex',
+  asyncHandler(async (req, res) => {
+    const turnIndex = Number(req.params.turnIndex);
+    if (!Number.isInteger(turnIndex) || turnIndex < 0) {
+      return res.status(400).json({ error: 'Invalid turn index.' });
+    }
+
+    const contract = await Contract.findOne({ _id: req.params.contractId, owner: req.user._id });
+    if (!contract) return res.status(404).json({ error: 'Contract not found.' });
+
+    const start = turnIndex * 2;
+    if (start >= contract.chatHistory.length) {
+      return res.status(404).json({ error: 'Chat turn not found.' });
+    }
+
+    contract.chatHistory.splice(start, 2);
+    await contract.save();
+
+    res.json({ chatHistory: contract.chatHistory });
   })
 );
 
