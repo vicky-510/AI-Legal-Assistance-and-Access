@@ -22,7 +22,7 @@ function ChatBubble({ message, onCiteClick, onDelete, deleting }) {
           onClick={onDelete}
           disabled={deleting}
           title="Delete this question & answer"
-          className="mt-1 shrink-0 rounded-md p-1 text-slate-300 opacity-0 transition-opacity hover:bg-rose-500/10 hover:text-rose-500 disabled:opacity-40 group-hover:opacity-100 dark:text-slate-600"
+          className="mt-1 shrink-0 rounded-md p-1 text-slate-400 transition-colors hover:bg-rose-500/10 hover:text-rose-500 disabled:opacity-40 dark:text-slate-500"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
